@@ -1,6 +1,10 @@
 # UT2 - Creación de una carta de un restaurante con React
 ## Índice
-- [App](#app)
+- [Principales Cambios](#principales-cambios)
+- [Estilos](#estilos)
+- [Componentes](#componentes)
+  - [EntradaCategoria.tsx](#entradacategoriatsx)
+  - [BloqueNuevaCategoria.tsx](#bloquenuevacategoriatsx)
 - [CRUD Productos](#crud-via-api)
   - [GET Categorías / Productos](#get-categorías--productos)
   - [POST Categorías / Productos](#post-categorías--productos)
@@ -10,9 +14,145 @@
 - [Resultado final de index.tsx](#resultado-final-de-indextsx)
 - [Repositorio](#repositorio)
 
-## App
+## Principales Cambios
+En este proyecto trataremos la migración de la carta desde React a React-Native. Ambas comparten ciertas similitudes pero en este proyecto se tratarán sus diferencias.
 
+### Estilos
+Uno de los principales cambios, y de los que menos se tocarán en este documente son los estilos. A diferencia de como se hizo en React, en React-Native los estilos irán directamente en cada componente. Para ello habrá que importar 'StyleSheet' y crear la variable con los estilos:
+```javascript
+import { Image, View, StyleSheet, ScrollView } from "react-native";
+// código...
+<ComponenteRandom style={styles.etiqeuetaEstilo} />
 
+const styles = StyleSheet.create({
+  etiquetaEstilo: {
+
+  }
+})
+```
+Como se aprecia, en lugar de className para llamar al css, se utiliza style={nombreDeLaVariableDeEstilo.etiquetaEstilo}.
+
+Otra particularidad es que muchos atributos se escriben de manera diferente al CSS convencional, como por ejemplo *background-color*. En React-Native sería *backgroundColor* y el valor en lugar de escribirlo 'a pelo', debe ir entre comillas:
+```css
+background-color: black;
+/* vs */
+backgroundColor: 'black';
+```
+
+## Componentes
+En este proyecto se usarán los mismos componentes respecto a la versión de React:
+- api.tsx (no es un componente como tal, pero trabajaremos con la api desde aquí. Es más, el fichero es exactamente el mismo que en React, así que se mantiene la misma explicación)
+- index.tsx: Similar a App.tsx y explicado en el último apartado
+- EntradaCategoría.tsx
+- BloqueNuevaCategoria.tsx
+
+> [!NOTE]
+> Tanto en *EntradaCategoria* como *BloqueNuevaCategoria* se utilizarán las mismas funciones para el CRUD que en la versión de React, por lo que no se tocarán en esta entrega. Esta explicación se va a centrar más en el cambio de componentes y atributos.
+
+### EntradaCategoria.tsx
+Otra de las novedades respecto a React es que ahora nos 'depedimos' de las etiquetas clásicas de HTML para emplear las propias de React Native. Su uso es algo similar pero variando sus nombres y el manejo de sus atributos.
+
+Por ejemplo: ahora en lugar de encapsular todo en un *div* se va a emplear un *View*. Con la particularidad de que para su correcto uso se tendrá que importar la etiqueta:
+```javascript
+import { View, Button,Text, StyleSheet, TextInput } from "react-native";
+// Se importará cada etiqueta que se quiera emplear en la vista
+```
+En primer lugar se va a establecer el input con el que iremos añadiendo las categorías a la API:
+```javascript
+<View style={styles.añadirCategoria}> // Encerramos todo en un View
+    <TextInput 
+        value={nuevaCategoria} // nombre de la categoría
+        onChangeText={setNuevaCategoria} // 'guardar' y establecer el nombre
+        placeholder="Añadir nueva categoría..."
+        placeholderTextColor='#000'/>
+    <Button
+        title="Añadir"
+        onPress={agregarCategoria} /> // llamada a la función para agregar la categoría
+</View>
+```
+De este modo guardamos cada nueva categoría en la API. A continuación, con el uso de un *map* vamos a recorrer todas las categorías de la api y en el mismo bloque se añadirán las funciones para editar o eliminar la categoría, así como la llamada al componente *BloqueNuevaCategoria* que contiene todos los productos de esa categoría.
+En un primer bloque se establece (empleando los *if* del futuro '?' y ':') que, si se pulsa la edición, el nombre de la categoría pasa a modo edición y si no que se muestre el nombre:
+```javascript
+{editandoId === categoria.id ? ( // 'Si' se está editando la categoría ... 
+    <View style={styles.editarCategoria}>
+        <TextInput  // ... se muestra el input para modificar el nombre ...
+            value={nombreEditado}
+            onChangeText={setNombreEditado}/>
+        <Button 
+            title="Guardar"
+            onPress={() => editarCategoria(categoria.id, nombreEditado)}/>
+    </View>
+) : ( // ...si 'no'...
+    <Text style={styles.tituloCategoria}>{categoria.nombre}</Text> // ... Se muestra el nombre actual (o el establecido después de editar)
+)}
+```
+Seguido a esto vendrían los productos pertenecientes a esa categoría:
+```javascript
+{(<BloqueNuevaCategoria categoriaId={categoria.id}/>)}
+```
+Y por último, los botones de edición / eliminar:
+```javascript
+<View style={styles.botonesCategoria}>
+    <Button
+        title="Editar Categoría" 
+        onPress={() => iniciarEdicion(categoria.id, categoria.nombre)}/> // llamada a la función editar
+    <Button 
+        title="Eliminar Categoría"
+        onPress={() => eliminarCategoria(categoria.id)}/> // llamada a la función eliminar
+</View>
+```
+
+### BloqueNuevaCategoria.tsx
+La mecánica de este componente es similar a la anterior. Se importan las etiquetas, definen las funciones y se retorna la vista de la misma forma que las categorías.
+Con un map se recorren todos los productos de la categoría y, por cada producto, se muestra:
+```javascript
+ {editandoId === producto.id ? ( // si se está editando el producto...
+    <View> 
+        <TextInput
+            value={nombreEditado}
+            onChangeText={setNombreEditado} />
+        <TextInput
+            value={precioEditado}
+            onChangeText={setPrecioEditado} />
+        <Button
+            title="Guardar"
+            onPress={() => editarProducto(producto.id, nombreEditado, parseFloat(precioEditado))} /> // llamada a la función de guardar edición
+    </View> // ... se llaman a los formularios de edición y al botón de guardar...
+) : ( // ... si no, pues se muestran los productos y cada uno con su botón de editar / eliminar
+    <View style={styles.listaProductos}>
+        <View style={styles.lineaProducto}>
+            <Text style={{fontSize: 16, fontWeight:'bold'}}>{producto.nombre}</Text>
+            <Text style={{fontSize: 16}}>{producto.precio}€</Text>
+        </View>
+        <View style={styles.botonesProducto}>
+            <Button
+                title="Editar"
+                onPress={() => iniciarEdicion(producto.id, producto.nombre, producto.precio)} /> // llamada a la función para editar
+            <Button
+                title="Eliminar"
+                onPress={() => eliminarProducto(producto.id)} /> // llamada a la función para eliminar
+        </View>
+    </View>
+)}
+```
+Y por último, se define el botón para añadir y los formularios (no muy elegantes...) para añadir el producto y el precio nuevos:
+```javascript
+<View style={styles.formAñadir}>
+    <TextInput
+        value={nuevoNombre} // nuevo nombre
+        onChangeText={setNuevoNombre} // se establece el nombre nuevo
+        placeholder="Nombre..." 
+        placeholderTextColor='#000'/>
+    <TextInput
+        value={nuevoPrecio} // nuevo precio
+        onChangeText={setNuevoPrecio} // se establece el nuevo precio
+        placeholder="Precio..." 
+        placeholderTextColor='#000' />
+    <Button
+        title="Añadir"
+        onPress={anadirProducto} />
+</View>
+```
 
 ## CRUD via API
 En este apartado se va a 'olvidar' parte de lo nombrado anteriormente, ya que se trabajará en la gestión de los elementos de la carta vía API. Para ello y en primer lugar se necesita crear un fichero (*api.tsx* en este caso) en el que gestionar los métodos ***fetch*** (métodos para hacer peticiones) a la API.
