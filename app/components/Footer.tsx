@@ -12,11 +12,10 @@ export default function Footer(){
 
 const styles = StyleSheet.create({
     footer:{
-        position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        padding: 50,
+        padding: 5,
         zIndex: 999,
     },
     cabecera: {

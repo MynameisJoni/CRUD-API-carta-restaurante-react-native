@@ -4,6 +4,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import BloqueNuevaCategoria from "./components/BloqueNuevaCategoria";
 import EntradaCategoria from "./components/EntradaCategoria";
+import MapaRestaurante from "./components/MapaRestaurante";
 
 export default function Index() {
   return (
@@ -15,6 +16,9 @@ export default function Index() {
         <ScrollView style={styles.carta}>
           <Header />
           <EntradaCategoria />
+          <View style={styles.mapaContainer}>
+            <MapaRestaurante />
+          </View>
           <View style={styles.footer}>
             <Footer />
           </View>
@@ -47,5 +51,10 @@ const styles = StyleSheet.create({
   fondo: {
     position: 'absolute',
     width: '100%',
+  },
+  mapaContainer: {
+    height: 300,
+    width: '100%',
+    marginVertical: 20,
   }
 });

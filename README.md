@@ -11,6 +11,13 @@
   - [PUT Categorías / Productos](#put-categorías--productos)
   - [DELETE Categorías / Productos](#delete-categoría--productos)
   - [Aplicación de los Componentes](#aplicación-en-los-componentes)
+- [Indroducción a Immágenes, Cámara y Mapas](#indroducción-a-immágenes-cámara-y-mapas)
+  - [Imágenes](#imágenes)
+    - [BotonImagenCategoria.tsx](#botonimagencategoriatsx)
+    - [ImageViewer.tsx](#imageviewertsx)
+  - [Cámara](#cámara)
+  - [MapaRestaurante.tsx](#maparestaurantetsx)
+  - [Resultado en EntradaCategoria.tsx](#resultado-en-entradacategoriatsx)
 - [Resultado final de index.tsx](#resultado-final-de-indextsx)
 - [Repositorio](#repositorio)
 
@@ -292,6 +299,138 @@ Simplemente llamamos a todas las categorías / productos con el método getCateg
     {(<BloqueNuevaCategoria categoriaId={categoria.id}/>)} // se muestra el bloque completo, es decir, con todo el contenido dentro de la cagoria -> Productos
 ```
 
+## Indroducción a Immágenes, Cámara y Mapas
+En este apartado se van a tratar el manejo de imágenes, el uso de la cámara y el uso de mapas para ubicar el negocio.
+
+### Imágenes
+Para este apartado se van a necesitar dos componentes nuevos: *BotonImagenCategoria*, *ImageViewer* y editar *EntradaCategoria*
+
+#### BotonImagenCategoria.tsx
+En este componente se tratará el botón que va a llevarnos a la galería para la selección de imagenes. Como elemento destacable, solo la importación de la etiqueta *FontAwesome* para el uso de iconos en la app. 
+```javascript
+<Pressable style={[styles.boton, {backgroundColor: '#fff'}]} onPress={onPress}> // Importante el Prop 'onPress', en el que más adelante se le pasará una función para abrir la galería
+    <FontAwesome name="picture-o" size={18} color="#25292e" style={styles.buttonIcon} /> // Icono de imagen
+    <Text style={[styles.buttonLabel, {color: '#25292e'}]}>{label}</Text> // nombre del botón
+</Pressable>
+```
+#### ImageViewer.tsx
+En este componente se va a almacenar la imagen seleccionada. Para ello se empleará *ImageSourcePropType*, que se encargará se guardar la imagen y mostrarla por la etiqueta *Image*. Para ello almanenaremos en una variable *imageSource* la url de la imagen *selectedImage* y si no existe, se mostrará una imagen por defecto *imgSource*:
+```javascript
+const imageSource = selectedImage ? { uri: selectedImage} : imgSource; // Variable para almacenar la url de la imagen o indicar una imagen por defecto
+
+return <Image source={imageSource} style={styles.image} /> // Se retorna la etiqueta con la variable de la ruta
+```
+
+### Cámara
+El uso de la cámara se integrará directamente en el bloque de *EntradaCategoría*. Este apartado tierta complejidad y se han empleado los siguientes *hooks* para manejar el uso de la camara:
+```javascript
+const [ facing, setFacing ] = useState<CameraType>('back'); // 'back' -> Cámara trasera
+const [ permission, requestPermission ] = useCameraPermissions(); // Simplemente verifica los permisos de la cámara
+const [ showCamera, setShowCamera ] = useState(false); // apertura de la cámara
+const [ categoriaActual, setCategoriaActual ] = useState<number | null>(null); // guarda la categoría donde usamos la camara
+const cameraRef = useRef<CameraView>(null); // vista de la imagen de la cámara
+```
+
+A continuación necesitamos dos funciones:
+- **takePictureAsync**: se encarga de abrir la cámara para la categoría correspondiente
+- **capturePhoto**: Se encarga de capturar la foto y guardarla
+
+```javascript
+const takePictureAsync = async(categoriaId: number) => { // nos quedamos en la categoría para la que queremos la imagen
+        if (!permission) {
+            return; // si se deniegan permisos para abrir la cámara, salimos
+        }
+
+        if (!permission.granted) { // se piden permisos...
+            const result = await requestPermission(); // ... almacenamos los permisos...
+            if (!result.granted) { //... si no se dan permosos...
+                alert("Necesitamos permisos de cámara");
+                return; // ... ciao
+            }
+        }
+
+        setCategoriaActual(categoriaId); // si hay permisos, nos quedamos en la categoría...
+        setShowCamera(true); // ... y abrimos la cámara
+    };
+```
+```javascript
+const capturePhoto = async() => { 
+    if (cameraRef.current && categoriaActual !== null) { // si está la cámara abierta y estamos dentro de una categoría ... 
+        try {
+            const photo = await cameraRef.current.takePictureAsync({ // ... tiramos la foto ...
+                quality: 1,
+                base64: false,
+                skipProcessing: false,
+            });
+            if (photo && photo.uri) { //... y si hay foto y está guardada
+                setImagenesCategoria({...imagenesCategoria, [categoriaActual]: photo.uri});
+                setShowCamera(false);
+                setCategoriaActual(null);
+                // ... establecemos la foto y salimos de la cámara
+            } else {
+                alert("Error al capturar la foto");
+            }
+        } catch (error) {
+            console.error("Error al tomar foto:", error);
+            alert("Error al tomar la foto");
+        }
+    }
+};
+```
+
+Estas funciones servirán para posteriormente plantear la vista de la cámara:
+```javascript
+if (showCamera) {
+    return (
+        <View>
+            <View>
+                <CameraView ref={cameraRef} style={styles.camera} facing={facing} /> // Vista de la camara trasera
+            </View>
+            <View style={styles.cameraControls}>
+              <Button title="Cancelar" onPress={() => setShowCamera(false)} /> // Botones para cancelar ...
+              <Button title="Tomar foto" onPress={capturePhoto} /> // ... o tomar la foto y llamar a la función 'capturePhoto'
+          </View>
+      </View>
+  );
+}
+```
+### MapaRestaurante.tsx
+Este componente será el encargado de mostrar el mapa en la vista principal de la app. El import inicial, y más importante:
+```javascript
+import MapView, { Marker } from 'react-native-maps';
+```
+A continuación, simplemente será definir la vista. Se tienen dos etiquetas:
+-  *MapView*: encargada de mostrar el mapa con la ubicación que se le indique
+- *Marker*: simplemente para mostrar con un marcador la dirección exacta
+```javascript
+<MapView
+    style={styles.map}
+    initialRegion={{
+        latitude: 28.12859914151696, // coordenadas del lugar
+        longitude: -15.443084224444048, // coordenadas del lugar
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+    }}
+>
+    <Marker
+        coordinate={{
+            latitude: 28.12859914151696, // marcador con las mismas coordenadas
+            longitude: -15.443084224444048, // marcador con las mismas coordenadas
+        }}
+        title="CamperCafe" // titulo del marcador
+        description="Cerquita del insti ;)" // saludito para el marcador
+    />
+</MapView>
+```
+Finalmente solo faltaría llamar al componente en la vista principal:
+```javascript
+<View style={styles.mapaContainer}>
+    <MapaRestaurante />
+</View>
+```
+### Resultado en EntradaCategoria.tsx
+Para implementar los dos apartados anteriores prim
+
 ## Resultado final de index.tsx
 Una vez definidos los **componentes**, el resultado del fichero principal se debería ver de la siguiente manera:
 ```javascript
@@ -301,6 +440,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import BloqueNuevaCategoria from "./components/BloqueNuevaCategoria";
 import EntradaCategoria from "./components/EntradaCategoria";
+import MapaRestaurante from "./components/MapaRestaurante";
 
 export default function Index() {
   return (
@@ -312,6 +452,9 @@ export default function Index() {
         <ScrollView style={styles.carta}>
           <Header />
           <EntradaCategoria />
+          <View style={styles.mapaContainer}>
+            <MapaRestaurante />
+          </View>
           <View style={styles.footer}>
             <Footer />
           </View>
@@ -344,6 +487,11 @@ const styles = StyleSheet.create({
   fondo: {
     position: 'absolute',
     width: '100%',
+  },
+  mapaContainer: {
+    height: 300,
+    width: '100%',
+    marginVertical: 20,
   }
 });
 ```
